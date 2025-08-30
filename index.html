@@ -117,7 +117,8 @@
 
     <script>
         const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
-        const API_KEY = "AIzaSyAPzP3da8pDTT9iUZBGIljAg0bgB2W8Zig";
+        // กรุณานำ API Key ของคุณมาใส่ที่นี่
+        const API_KEY = "";
 
         // Function to handle form submission for meal plan
         document.getElementById('meal-button').addEventListener('click', async function(event) {
@@ -216,7 +217,7 @@
                     },
                 };
 
-                const responseMeal = await fetch(API_URL, {
+                const responseMeal = await fetch(API_URL + API_KEY, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payloadMeal)
@@ -263,7 +264,7 @@
                     },
                 };
                 
-                const responseWorkout = await fetch(API_URL, {
+                const responseWorkout = await fetch(API_URL + API_KEY, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payloadWorkout)
