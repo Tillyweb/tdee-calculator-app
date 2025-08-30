@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDEE Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F8FF; /* Pastel blue */
+        }
+        .emoji {
+            position: absolute;
+            font-size: 2rem;
+            animation-iteration-count: infinite;
+            pointer-events: none;
+            opacity: 0.8;
+            z-index: -1;
+        }
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+            50% { transform: translate(calc(var(--rand-x) * 1px), calc(var(--rand-y) * 1px)) rotate(calc(var(--rand-rot) * 1deg)); opacity: 0.6; }
+            100% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body class="bg-blue-50 flex items-center justify-center min-h-screen p-4 overflow-hidden">
+    <!-- Floating Emojis -->
+    <div id="emoji-container"></div>
+
+    <div class="bg-white p-6 md:p-10 rounded-3xl shadow-xl w-full max-w-2xl transform transition-all duration-300 relative z-10">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2">
+            เครื่องคำนวณ TDEE
+        </h1>
+        <p class="text-sm md:text-base text-center text-gray-600 mb-6 md:mb-8 tracking-wide">
+            กรอกข้อมูลเพื่อคำนวณปริมาณพลังงานที่ร่างกายต้องการในแต่ละวัน
+        </p>
+
+        <form id="tdee-form" class="space-y-4 md:space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                    <label for="gender" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">เพศ</label>
+                    <select id="gender" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 appearance-none text-sm md:text-base">
+                        <option value="male">ชาย</option>
+                        <option value="female">หญิง</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="age" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">อายุ (ปี)</label>
+                    <input type="number" id="age" min="1" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 text-sm md:text-base" required>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                    <label for="weight" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">น้ำหนัก (กิโลกรัม)</label>
+                    <input type="number" id="weight" step="0.1" min="1" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 text-sm md:text-base" required>
+                </div>
+                <div>
+                    <label for="height" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">ส่วนสูง (เซนติเมตร)</label>
+                    <input type="number" id="height" step="0.1" min="1" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 text-sm md:text-base" required>
+                </div>
+            </div>
+            <div>
+                <label for="activity" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">ระดับกิจกรรม</label>
+                <select id="activity" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 appearance-none text-sm md:text-base">
+                    <option value="1.2">ไม่ออกกำลังกายเลย</option>
+                    <option value="1.375">ออกกำลังกายน้อย (1-3 วัน/สัปดาห์)</option>
+                    <option value="1.55">ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)</option>
+                    <option value="1.725">ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)</option>
+                    <option value="1.9">นักกีฬา (ออกกำลังกายวันละ 2 ครั้ง)</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 md:py-4 rounded-xl hover:bg-blue-600 transition-colors duration-200 shadow-md text-base md:text-lg">
+                คำนวณ
+            </button>
+        </form>
+
+        <div id="result" class="mt-6 md:mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-200 hidden">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 text-center mb-4">ผลลัพธ์</h2>
+            <p class="text-base md:text-lg text-gray-700 text-center">
+                TDEE ของคุณคือ: <span id="tdee-value" class="font-bold text-gray-900"></span> กิโลแคลอรี่/วัน
+            </p>
+            <div class="mt-4 md:mt-6">
+                <h3 class="text-lg md:text-xl font-semibold text-gray-900 text-center mb-4">
+                    ตัวอย่างเมนูอาหาร 3 มื้อ
+                </h3>
+                <div id="meal-plan" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('tdee-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const gender = document.getElementById('gender').value;
+            const age = parseFloat(document.getElementById('age').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const activityFactor = parseFloat(document.getElementById('activity').value);
+
+            let bmr;
+            if (gender === 'male') {
+                bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+            } else {
+                bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+            }
+
+            const tdee = Math.round(bmr * activityFactor);
+
+            document.getElementById('tdee-value').textContent = tdee;
+            document.getElementById('result').classList.remove('hidden');
+
+            const mealPlanDiv = document.getElementById('meal-plan');
+            mealPlanDiv.innerHTML = '<p class="text-center text-gray-600">กำลังสร้างเมนูอาหาร...</p>';
+
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const systemPrompt = "คุณคือผู้ช่วยด้านโภชนาการที่มีความเชี่ยวชาญ กรุณาให้คำแนะนำเมนูอาหารในรูปแบบ JSON เท่านั้น โดยคำนวณจากปริมาณแคลอรี่ที่กำหนดให้";
+                const userQuery = `สร้างแผนเมนูอาหาร 3 มื้อสำหรับคนที่มีความต้องการพลังงาน ${tdee} กิโลแคลอรี่ต่อวัน เมนูต้องเป็นภาษาไทยและมีชื่อเมนูพร้อมคำอธิบายสั้นๆ (description) โดยให้แต่ละมื้อมีปริมาณแคลอรี่ใกล้เคียงกัน`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    "name": { "type": "STRING" },
+                                    "description": { "type": "STRING" },
+                                    "calories": { "type": "NUMBER" }
+                                },
+                                "propertyOrdering": ["name", "description", "calories"]
+                            }
+                        }
+                    },
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API response was not ok: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) {
+                    throw new Error('No content returned from the API.');
+                }
+                
+                const meals = JSON.parse(jsonText);
+                renderMealPlan(meals);
+
+            } catch (error) {
+                console.error("Error generating meal plan:", error);
+                mealPlanDiv.innerHTML = '<p class="text-center text-red-500">ไม่สามารถสร้างเมนูอาหารได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง</p>';
+            }
+        });
+
+        function renderMealPlan(meals) {
+            const mealPlanDiv = document.getElementById('meal-plan');
+            mealPlanDiv.innerHTML = '';
+
+            meals.forEach(meal => {
+                const mealItem = document.createElement('div');
+                mealItem.className = 'p-4 rounded-lg bg-white shadow-sm';
+                mealItem.innerHTML = `
+                    <h4 class="font-semibold text-gray-900 text-lg mb-1">${meal.name} (~${meal.calories || 'ไม่ได้ระบุ'} กิโลแคลอรี่)</h4>
+                    <p class="text-gray-600 text-sm">${meal.description}</p>
+                `;
+                mealPlanDiv.appendChild(mealItem);
+            });
+        }
+        
+        // Dynamic emoji generation and animation
+        window.onload = function() {
+            const emojis = ['✨', '💖', '🌸', '🦋', '🌈', '💙', '💜'];
+            const container = document.getElementById('emoji-container');
+
+            for (let i = 0; i < 20; i++) {
+                const emoji = document.createElement('span');
+                emoji.className = 'emoji';
+                emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                
+                // Randomize position and animation properties
+                emoji.style.left = `${Math.random() * 100}%`;
+                emoji.style.top = `${Math.random() * 100}%`;
+                emoji.style.animationName = 'float';
+                emoji.style.animationDuration = `${15 + Math.random() * 5}s`;
+                emoji.style.animationDelay = `${Math.random() * -10}s`;
+                emoji.style.setProperty('--rand-x', Math.random() * 50 - 25);
+                emoji.style.setProperty('--rand-y', Math.random() * -50);
+                emoji.style.setProperty('--rand-rot', Math.random() * 20 - 10);
+                
+                container.appendChild(emoji);
+            }
+        };
+    </script>
+</body>
+</html>
