@@ -116,13 +116,9 @@
     </div>
 
     <script>
-        // === สิ่งสำคัญที่ต้องทำ ===
-        // 1. ไปที่โปรเจกต์ Google Script ของคุณ แล้วกด "Deploy" > "New deployment"
-        // 2. เลือกประเภทเป็น "Web app"
-        // 3. ตั้งค่า "Who has access" เป็น "Anyone"
-        // 4. กด "Deploy" แล้วคัดลอก "Web app URL" ที่ได้มา
-        // 5. นำ URL ที่คัดลอกมา ไปวางแทนที่ 'YOUR_GOOGLE_SCRIPT_WEB_APP_URL' ข้างล่างนี้
-        const googleScriptUrl = 'https://script.google.com/macros/library/d/1UOXCxY-pAPQpIFZAgZb2_dD0Q52ypvCAb6g1wU7fSAW1bzokmryrXgIQ/4';
+        // API Key and URL for Google Gemini API
+        const apiKey = 'AIzaSyAPzP3da8pDTT9iUZBGIljAg0bgB2W8Zig';
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
         // Function to handle form submission for meal plan
         document.getElementById('meal-button').addEventListener('click', async function(event) {
@@ -143,6 +139,12 @@
             const height = parseFloat(document.getElementById('height').value);
             const activityFactor = parseFloat(document.getElementById('activity').value);
             const goal = document.getElementById('goal').value;
+
+            // Validate inputs
+            if (isNaN(age) || isNaN(weight) || isNaN(height) || age <= 0 || weight <= 0 || height <= 0) {
+                 alert("กรุณากรอกข้อมูล อายุ, น้ำหนัก, และส่วนสูงให้ถูกต้อง");
+                 return;
+            }
 
             let bmr;
             if (gender === 'male') {
@@ -221,25 +223,21 @@
                     },
                 };
                 
-                const requestBody = {
-                    mode: 'meal',
-                    payload: payloadMeal
-                };
-
-                const response = await fetch(googleScriptUrl, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
-                    body: JSON.stringify(requestBody)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadMeal)
                 });
 
-
                 if (!response.ok) {
-                    throw new Error(`Google Script response was not ok: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    throw new Error(`API response was not ok: ${response.status} ${response.statusText} - ${errorText}`);
                 }
 
                 const resultMeal = await response.json();
                 const jsonTextMeal = resultMeal?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonTextMeal) {
-                    throw new Error('No content returned from the API via Google Script for meal plan.');
+                    throw new Error('No content returned from the API for meal plan.');
                 }
                 
                 const meals = JSON.parse(jsonTextMeal);
@@ -273,18 +271,15 @@
                     },
                 };
                 
-                const requestBody = {
-                    mode: 'workout',
-                    payload: payloadWorkout
-                };
-                
-                const response = await fetch(googleScriptUrl, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
-                    body: JSON.stringify(requestBody)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadWorkout)
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Google Script response was not ok: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    throw new Error(`API response was not ok: ${response.status} ${response.statusText} - ${errorText}`);
                 }
 
                 const resultWorkout = await response.json();
@@ -307,7 +302,7 @@
 
             meals.forEach(meal => {
                 const mealItem = document.createElement('div');
-                mealItem.className = 'p-4 rounded-lg bg-white shadow-sm';
+                mealItem.className = 'p-4 rounded-lg bg-white shadow-sm border border-gray-100';
                 mealItem.innerHTML = `
                     <h4 class="font-semibold text-gray-900 text-lg mb-1">${meal.name} (~${meal.calories || 'ไม่ได้ระบุ'} kcal)</h4>
                     <p class="text-gray-600 text-sm">${meal.description}</p>
@@ -348,4 +343,3 @@
     </script>
 </body>
 </html>
-
