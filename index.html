@@ -26,11 +26,11 @@
         }
     </style>
 </head>
-<body class="bg-blue-50 flex items-center justify-center min-h-screen p-4 overflow-hidden">
+<body class="bg-blue-50 p-4">
     <!-- Floating Emojis -->
     <div id="emoji-container"></div>
 
-    <div class="bg-white p-6 md:p-10 rounded-3xl shadow-xl w-full max-w-2xl transform transition-all duration-300 relative z-10">
+    <div id="calculator-view" class="bg-white p-6 md:p-10 rounded-3xl shadow-xl w-full max-w-2xl mx-auto my-8 transform transition-all duration-300 relative z-10">
         <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-2">
             เครื่องคำนวณ TDEE
         </h1>
@@ -79,29 +79,59 @@
                     <option value="weightLoss">ช่วงลดน้ำหนัก (แคลอรี่ 75% ของ TDEE)</option>
                 </select>
             </div>
-            <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 md:py-4 rounded-xl hover:bg-blue-600 transition-colors duration-200 shadow-md text-base md:text-lg">
-                คำนวณ
-            </button>
-        </form>
-
-        <div id="result" class="mt-6 md:mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-200 hidden">
-            <h2 class="text-xl md:text-2xl font-bold text-gray-900 text-center mb-4">ผลลัพธ์</h2>
-            <p class="text-base md:text-lg text-gray-700 text-center">
-                ปริมาณพลังงานที่แนะนำ: <span id="final-calories" class="font-bold text-gray-900"></span> กิโลแคลอรี่/วัน
-            </p>
-            <div class="mt-4 md:mt-6">
-                <h3 class="text-lg md:text-xl font-semibold text-gray-900 text-center mb-4">
-                    ตัวอย่างเมนูอาหาร 3 มื้อ
-                </h3>
-                <div id="meal-plan" class="space-y-4"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4">
+                <button type="submit" id="meal-button" class="w-full bg-blue-500 text-white font-semibold py-3 md:py-4 rounded-xl hover:bg-blue-600 transition-colors duration-200 shadow-md text-base md:text-lg">
+                    แนะนำมื้ออาหาร
+                </button>
+                <button type="button" id="workout-button" class="w-full bg-blue-500 text-white font-semibold py-3 md:py-4 rounded-xl hover:bg-blue-600 transition-colors duration-200 shadow-md text-base md:text-lg">
+                    แนะนำการออกกำลังกาย
+                </button>
             </div>
+        </form>
+    </div>
+
+    <div id="result-view" class="bg-white p-6 md:p-10 rounded-3xl shadow-xl w-full max-w-2xl mx-auto my-8 transform transition-all duration-300 relative z-10 hidden">
+        <h2 id="result-title" class="text-xl md:text-2xl font-bold text-gray-900 text-center mb-4"></h2>
+        <p class="text-base md:text-lg text-gray-700 text-center mb-6">
+            ปริมาณพลังงานที่แนะนำ: <span id="final-calories" class="font-bold text-gray-900"></span> กิโลแคลอรี่/วัน
+        </p>
+        <div id="meal-section">
+            <h3 class="text-lg md:text-xl font-semibold text-gray-900 text-center mb-4">
+                ตัวอย่างเมนูอาหาร 3 มื้อ
+            </h3>
+            <div id="meal-plan" class="space-y-4"></div>
         </div>
+        <div id="workout-section" class="mt-8">
+            <h3 class="text-lg md:text-xl font-semibold text-gray-900 text-center mb-4">
+                โปรแกรมออกกำลังกาย
+            </h3>
+            <p class="text-base md:text-lg text-gray-700 text-center mb-6">
+                ความแตกต่างจากกิจกรรมปกติ: <span id="tdee-difference" class="font-bold text-gray-900"></span> กิโลแคลอรี่/วัน
+            </p>
+            <div id="workout-program" class="space-y-4"></div>
+        </div>
+        <button id="back-button" class="w-full bg-gray-300 text-gray-800 font-semibold py-3 md:py-4 rounded-xl hover:bg-gray-400 transition-colors duration-200 shadow-md text-base md:text-lg mt-8">
+            กลับ
+        </button>
     </div>
 
     <script>
-        document.getElementById('tdee-form').addEventListener('submit', async function(event) {
-            event.preventDefault();
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
+        const API_KEY = "";
 
+        // Function to handle form submission for meal plan
+        document.getElementById('meal-button').addEventListener('click', async function(event) {
+            event.preventDefault();
+            await handleCalculation('meal');
+        });
+
+        // Function to handle workout button click
+        document.getElementById('workout-button').addEventListener('click', async function(event) {
+            event.preventDefault();
+            await handleCalculation('workout');
+        });
+
+        async function handleCalculation(mode) {
             const gender = document.getElementById('gender').value;
             const age = parseFloat(document.getElementById('age').value);
             const weight = parseFloat(document.getElementById('weight').value);
@@ -123,25 +153,49 @@
                 finalCalories = Math.round(tdee * 0.75);
             }
 
+            // Calculate TDEE for sedentary lifestyle to find the difference
+            const sedentaryTDEE = Math.round(bmr * 1.2);
+            const tdeeDifference = tdee - sedentaryTDEE;
+
             document.getElementById('final-calories').textContent = finalCalories;
-            document.getElementById('result').classList.remove('hidden');
+            
+            document.getElementById('calculator-view').classList.add('hidden');
+            document.getElementById('result-view').classList.remove('hidden');
 
+            const mealSection = document.getElementById('meal-section');
+            const workoutSection = document.getElementById('workout-section');
+            const resultTitle = document.getElementById('result-title');
+            
+            // Set TDEE difference text
+            document.getElementById('tdee-difference').textContent = tdeeDifference;
+
+            if (mode === 'meal') {
+                resultTitle.textContent = "ผลลัพธ์: แผนอาหาร";
+                mealSection.classList.remove('hidden');
+                workoutSection.classList.add('hidden');
+                document.getElementById('meal-plan').innerHTML = '<p class="text-center text-gray-600">กำลังสร้างเมนูอาหาร...</p>';
+                await generateMealPlan(finalCalories, goal);
+            } else if (mode === 'workout') {
+                resultTitle.textContent = "ผลลัพธ์: โปรแกรมออกกำลังกาย";
+                mealSection.classList.add('hidden');
+                workoutSection.classList.remove('hidden');
+                document.getElementById('workout-program').innerHTML = '<p class="text-center text-gray-600">กำลังสร้างโปรแกรมออกกำลังกาย...</p>';
+                await generateWorkoutPlan(activityFactor, gender, tdeeDifference);
+            }
+        }
+
+        async function generateMealPlan(finalCalories, goal) {
             const mealPlanDiv = document.getElementById('meal-plan');
-            mealPlanDiv.innerHTML = '<p class="text-center text-gray-600">กำลังสร้างเมนูอาหาร...</p>';
-
             try {
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                const systemPrompt = "คุณคือผู้ช่วยด้านโภชนาการที่มีความเชี่ยวชาญ กรุณาให้คำแนะนำเมนูอาหารในรูปแบบ JSON เท่านั้น โดยคำนวณจากปริมาณแคลอรี่ที่กำหนดให้";
-                const userQuery = `สร้างแผนเมนูอาหาร 3 มื้อสำหรับคนที่มีความต้องการพลังงาน ${finalCalories} กิโลแคลอรี่ต่อวัน เมนูต้องเป็นภาษาไทยและมีชื่อเมนูพร้อมคำอธิบายสั้นๆ (description) โดยให้แต่ละมื้อมีปริมาณแคลอรี่ใกล้เคียงกัน`;
+                const systemPromptMeal = "คุณคือผู้ช่วยด้านโภชนาการที่มีความเชี่ยวชาญ กรุณาให้คำแนะนำเมนูอาหารในรูปแบบ JSON เท่านั้น";
+                let userQueryMeal = `สร้างแผนเมนูอาหาร 3 มื้อสำหรับคนที่มีความต้องการพลังงาน ${finalCalories} กิโลแคลอรี่ต่อวัน โดยใช้ข้าวหอมมะลิเป็นหลักในการออกแบบเมนู แต่ละมื้อต้องระบุปริมาณข้าวหอมมะลิเป็นกรัม และปริมาณเนื้อสัตว์ (เช่น ไก่, หมู, ปลา) เป็นกรัมที่เหมาะสมสำหรับเมนูนั้นๆ`;
                 
                 if (goal === 'weightLoss') {
-                    userQuery += " ซึ่งเมนูนี้เหมาะสำหรับการลดน้ำหนักและมีปริมาณแคลอรี่ที่เหมาะสม";
+                    userQueryMeal += " ซึ่งเมนูนี้เหมาะสำหรับการลดน้ำหนักและมีปริมาณแคลอรี่ที่เหมาะสม";
                 }
 
-                const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
+                const payloadMeal = {
+                    contents: [{ parts: [{ text: userQueryMeal }] }],
                     generationConfig: {
                         responseMimeType: "application/json",
                         responseSchema: {
@@ -158,35 +212,81 @@
                         }
                     },
                     systemInstruction: {
-                        parts: [{ text: systemPrompt }]
+                        parts: [{ text: systemPromptMeal }]
                     },
                 };
 
-                const response = await fetch(apiUrl, {
+                const responseMeal = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payloadMeal)
                 });
 
-                if (!response.ok) {
-                    throw new Error(`API response was not ok: ${response.status} ${response.statusText}`);
+                if (!responseMeal.ok) {
+                    throw new Error(`API response for meal plan was not ok: ${responseMeal.status} ${responseMeal.statusText}`);
                 }
 
-                const result = await response.json();
-                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!jsonText) {
-                    throw new Error('No content returned from the API.');
+                const resultMeal = await responseMeal.json();
+                const jsonTextMeal = resultMeal?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonTextMeal) {
+                    throw new Error('No content returned from the API for meal plan.');
                 }
                 
-                const meals = JSON.parse(jsonText);
+                const meals = JSON.parse(jsonTextMeal);
                 renderMealPlan(meals);
-
             } catch (error) {
                 console.error("Error generating meal plan:", error);
                 mealPlanDiv.innerHTML = '<p class="text-center text-red-500">ไม่สามารถสร้างเมนูอาหารได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง</p>';
             }
-        });
+        }
 
+        async function generateWorkoutPlan(activityFactor, gender, tdeeDifference) {
+            const workoutProgramDiv = document.getElementById('workout-program');
+            try {
+                const systemPromptWorkout = "คุณคือผู้เชี่ยวชาญด้านการออกกำลังกาย กรุณาสร้างโปรแกรมออกกำลังกายในรูปแบบข้อความ";
+                let userQueryWorkout = `สร้างโปรแกรมออกกำลังกายแบบบอดี้เวท โดยใช้อุปกรณ์เสริมแค่ดัมเบล 5 กิโลกรัม ไม่มีคาร์ดิโอ โปรแกรมต้องชัดเจน เข้าใจง่าย `;
+
+                if (tdeeDifference > 200) {
+                    userQueryWorkout += `สำหรับผู้ที่ออกกำลังกายหนัก โดยต้องใช้พลังงานเพิ่มขึ้น ${tdeeDifference} กิโลแคลอรี่ต่อวัน`;
+                } else if (tdeeDifference > 100) {
+                    userQueryWorkout += `สำหรับผู้ที่ออกกำลังกายปานกลาง โดยต้องใช้พลังงานเพิ่มขึ้น ${tdeeDifference} กิโลแคลอรี่ต่อวัน`;
+                } else {
+                    userQueryWorkout += `สำหรับผู้ที่ออกกำลังกายน้อย โดยต้องใช้พลังงานเพิ่มขึ้น ${tdeeDifference} กิโลแคลอรี่ต่อวัน`;
+                }
+                
+                userQueryWorkout += ` โดยสุ่มท่าออกกำลังกายที่เหมาะสมกับเพศ${gender === 'male' ? 'ชาย' : 'หญิง'}และระดับกิจกรรมที่เลือก`;
+
+                const payloadWorkout = {
+                    contents: [{ parts: [{ text: userQueryWorkout }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPromptWorkout }]
+                    },
+                };
+                
+                const responseWorkout = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payloadWorkout)
+                });
+
+                if (!responseWorkout.ok) {
+                    throw new Error(`API response for workout plan was not ok: ${responseWorkout.status} ${responseWorkout.statusText}`);
+                }
+
+                const resultWorkout = await responseWorkout.json();
+                const workoutText = resultWorkout?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (workoutText) {
+                    workoutProgramDiv.innerHTML = `<p class="whitespace-pre-wrap text-gray-600 text-sm">${workoutText}</p>`;
+                } else {
+                    workoutProgramDiv.innerHTML = '<p class="text-center text-red-500">ไม่สามารถสร้างโปรแกรมออกกำลังกายได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง</p>';
+                }
+
+            } catch (error) {
+                console.error("Error generating workout plan:", error);
+                workoutProgramDiv.innerHTML = '<p class="text-center text-red-500">ไม่สามารถสร้างโปรแกรมออกกำลังกายได้ในขณะนี้</p>';
+            }
+        }
+        
         function renderMealPlan(meals) {
             const mealPlanDiv = document.getElementById('meal-plan');
             mealPlanDiv.innerHTML = '';
@@ -195,13 +295,19 @@
                 const mealItem = document.createElement('div');
                 mealItem.className = 'p-4 rounded-lg bg-white shadow-sm';
                 mealItem.innerHTML = `
-                    <h4 class="font-semibold text-gray-900 text-lg mb-1">${meal.name} (~${meal.calories || 'ไม่ได้ระบุ'} กิโลแคลอรี่)</h4>
+                    <h4 class="font-semibold text-gray-900 text-lg mb-1">${meal.name} (~${meal.calories || 'ไม่ได้ระบุ'} kcal)</h4>
                     <p class="text-gray-600 text-sm">${meal.description}</p>
                 `;
                 mealPlanDiv.appendChild(mealItem);
             });
         }
         
+        // ปุ่มย้อนกลับ
+        document.getElementById('back-button').addEventListener('click', function() {
+            document.getElementById('calculator-view').classList.remove('hidden');
+            document.getElementById('result-view').classList.add('hidden');
+        });
+
         // Dynamic emoji generation and animation
         window.onload = function() {
             const emojis = ['✨', '💖', '🌸', '🦋', '🌈', '💙', '💜'];
