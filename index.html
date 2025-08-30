@@ -65,11 +65,11 @@
             <div>
                 <label for="activity" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">ระดับกิจกรรม</label>
                 <select id="activity" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 appearance-none text-sm md:text-base">
-                        <option value="1.2">ไม่ออกกำลังกายเลย</option>
-                        <option value="1.375">ออกกำลังกายน้อย (1-3 วัน/สัปดาห์)</option>
-                        <option value="1.55">ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)</option>
-                        <option value="1.725">ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)</option>
-                        <option value="1.9">นักกีฬา (ออกกำลังกายวันละ 2 ครั้ง)</option>
+                    <option value="1.2">ไม่ออกกำลังกายเลย</option>
+                    <option value="1.375">ออกกำลังกายน้อย (1-3 วัน/สัปดาห์)</option>
+                    <option value="1.55">ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)</option>
+                    <option value="1.725">ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)</option>
+                    <option value="1.9">นักกีฬา (ออกกำลังกายวันละ 2 ครั้ง)</option>
                 </select>
             </div>
             <div>
@@ -116,8 +116,13 @@
     </div>
 
     <script>
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
-        const API_KEY = "AIzaSyAPzP3da8pDTT9iUZBGIljAg0bgB2W8Zig";
+        // === สิ่งสำคัญที่ต้องทำ ===
+        // 1. ไปที่โปรเจกต์ Google Script ของคุณ แล้วกด "Deploy" > "New deployment"
+        // 2. เลือกประเภทเป็น "Web app"
+        // 3. ตั้งค่า "Who has access" เป็น "Anyone"
+        // 4. กด "Deploy" แล้วคัดลอก "Web app URL" ที่ได้มา
+        // 5. นำ URL ที่คัดลอกมา ไปวางแทนที่ 'YOUR_GOOGLE_SCRIPT_WEB_APP_URL' ข้างล่างนี้
+        const googleScriptUrl = 'https://script.google.com/macros/s/AKfycbxt-UEeN7d_WE2t1xn4Z62esjEp_VmJBbDZLtW7ZWA7-TfS7udZeRyAG8oW7tAmOp-X/exec';
 
         // Function to handle form submission for meal plan
         document.getElementById('meal-button').addEventListener('click', async function(event) {
@@ -215,21 +220,26 @@
                         parts: [{ text: systemPromptMeal }]
                     },
                 };
+                
+                const requestBody = {
+                    mode: 'meal',
+                    payload: payloadMeal
+                };
 
-                const responseMeal = await fetch(API_URL, {
+                const response = await fetch(googleScriptUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payloadMeal)
+                    body: JSON.stringify(requestBody)
                 });
 
-                if (!responseMeal.ok) {
-                    throw new Error(`API response for meal plan was not ok: ${responseMeal.status} ${responseMeal.statusText}`);
+
+                if (!response.ok) {
+                    throw new Error(`Google Script response was not ok: ${response.status} ${response.statusText}`);
                 }
 
-                const resultMeal = await responseMeal.json();
+                const resultMeal = await response.json();
                 const jsonTextMeal = resultMeal?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonTextMeal) {
-                    throw new Error('No content returned from the API for meal plan.');
+                    throw new Error('No content returned from the API via Google Script for meal plan.');
                 }
                 
                 const meals = JSON.parse(jsonTextMeal);
@@ -263,17 +273,21 @@
                     },
                 };
                 
-                const responseWorkout = await fetch(API_URL, {
+                const requestBody = {
+                    mode: 'workout',
+                    payload: payloadWorkout
+                };
+                
+                const response = await fetch(googleScriptUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payloadWorkout)
+                    body: JSON.stringify(requestBody)
                 });
 
-                if (!responseWorkout.ok) {
-                    throw new Error(`API response for workout plan was not ok: ${responseWorkout.status} ${responseWorkout.statusText}`);
+                if (!response.ok) {
+                    throw new Error(`Google Script response was not ok: ${response.status} ${response.statusText}`);
                 }
 
-                const resultWorkout = await responseWorkout.json();
+                const resultWorkout = await response.json();
                 const workoutText = resultWorkout?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (workoutText) {
                     workoutProgramDiv.innerHTML = `<p class="whitespace-pre-wrap text-gray-600 text-sm">${workoutText}</p>`;
@@ -302,7 +316,7 @@
             });
         }
         
-        // ปุ่มย้อนกลับ
+        // Back button
         document.getElementById('back-button').addEventListener('click', function() {
             document.getElementById('calculator-view').classList.remove('hidden');
             document.getElementById('result-view').classList.add('hidden');
@@ -334,3 +348,4 @@
     </script>
 </body>
 </html>
+
