@@ -72,6 +72,13 @@
                     <option value="1.9">นักกีฬา (ออกกำลังกายวันละ 2 ครั้ง)</option>
                 </select>
             </div>
+            <div>
+                <label for="goal" class="block text-gray-700 font-medium mb-1 md:mb-2 text-sm md:text-base">เป้าหมาย</label>
+                <select id="goal" class="w-full p-3 md:p-4 border border-blue-200 rounded-xl focus:ring-blue-300 focus:border-blue-300 transition-colors duration-200 appearance-none text-sm md:text-base">
+                    <option value="normal">ช่วงปกติ</option>
+                    <option value="weightLoss">ช่วงลดน้ำหนัก (แคลอรี่ 75% ของ TDEE)</option>
+                </select>
+            </div>
             <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 md:py-4 rounded-xl hover:bg-blue-600 transition-colors duration-200 shadow-md text-base md:text-lg">
                 คำนวณ
             </button>
@@ -80,7 +87,7 @@
         <div id="result" class="mt-6 md:mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-200 hidden">
             <h2 class="text-xl md:text-2xl font-bold text-gray-900 text-center mb-4">ผลลัพธ์</h2>
             <p class="text-base md:text-lg text-gray-700 text-center">
-                TDEE ของคุณคือ: <span id="tdee-value" class="font-bold text-gray-900"></span> กิโลแคลอรี่/วัน
+                ปริมาณพลังงานที่แนะนำ: <span id="final-calories" class="font-bold text-gray-900"></span> กิโลแคลอรี่/วัน
             </p>
             <div class="mt-4 md:mt-6">
                 <h3 class="text-lg md:text-xl font-semibold text-gray-900 text-center mb-4">
@@ -100,6 +107,7 @@
             const weight = parseFloat(document.getElementById('weight').value);
             const height = parseFloat(document.getElementById('height').value);
             const activityFactor = parseFloat(document.getElementById('activity').value);
+            const goal = document.getElementById('goal').value;
 
             let bmr;
             if (gender === 'male') {
@@ -109,8 +117,13 @@
             }
 
             const tdee = Math.round(bmr * activityFactor);
+            let finalCalories = tdee;
 
-            document.getElementById('tdee-value').textContent = tdee;
+            if (goal === 'weightLoss') {
+                finalCalories = Math.round(tdee * 0.75);
+            }
+
+            document.getElementById('final-calories').textContent = finalCalories;
             document.getElementById('result').classList.remove('hidden');
 
             const mealPlanDiv = document.getElementById('meal-plan');
@@ -121,7 +134,11 @@
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 const systemPrompt = "คุณคือผู้ช่วยด้านโภชนาการที่มีความเชี่ยวชาญ กรุณาให้คำแนะนำเมนูอาหารในรูปแบบ JSON เท่านั้น โดยคำนวณจากปริมาณแคลอรี่ที่กำหนดให้";
-                const userQuery = `สร้างแผนเมนูอาหาร 3 มื้อสำหรับคนที่มีความต้องการพลังงาน ${tdee} กิโลแคลอรี่ต่อวัน เมนูต้องเป็นภาษาไทยและมีชื่อเมนูพร้อมคำอธิบายสั้นๆ (description) โดยให้แต่ละมื้อมีปริมาณแคลอรี่ใกล้เคียงกัน`;
+                const userQuery = `สร้างแผนเมนูอาหาร 3 มื้อสำหรับคนที่มีความต้องการพลังงาน ${finalCalories} กิโลแคลอรี่ต่อวัน เมนูต้องเป็นภาษาไทยและมีชื่อเมนูพร้อมคำอธิบายสั้นๆ (description) โดยให้แต่ละมื้อมีปริมาณแคลอรี่ใกล้เคียงกัน`;
+                
+                if (goal === 'weightLoss') {
+                    userQuery += " ซึ่งเมนูนี้เหมาะสำหรับการลดน้ำหนักและมีปริมาณแคลอรี่ที่เหมาะสม";
+                }
 
                 const payload = {
                     contents: [{ parts: [{ text: userQuery }] }],
